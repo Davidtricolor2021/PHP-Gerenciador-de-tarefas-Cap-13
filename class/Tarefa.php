@@ -48,6 +48,12 @@ class Tarefa
 
     public function getPrazo(): DateTime
     {
+        if (is_string($this->prazo) && ! empty($this->prazo)) {
+            $this->prazo = DateTime::createFromFormat("Y-m-d", $this->prazo);
+        } elseif ($this->prazo == "") {
+            $this->prazo = null;
+        }
+
         return $this->prazo;
     }
 
