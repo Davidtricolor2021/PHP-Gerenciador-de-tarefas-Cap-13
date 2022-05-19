@@ -2,7 +2,9 @@
 
 require "config.php";
 require "banco.php";
+require "classes/RepositorioTarefas.php";
 
-remover_tarefa($conexao, $_GET['id']);
+$repositorio_tarefas = new RepositorioTarefas($mysqli);
+$repositorio_tarefas->remover($_GET['id']);
 
 header('Location: tarefas.php');
