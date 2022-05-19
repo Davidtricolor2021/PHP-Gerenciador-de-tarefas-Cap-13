@@ -69,13 +69,88 @@ class RepositorioTarefas
         $this->conexao->query($sqlEditar);
     }
 
-    public function buscar(int $tarefa_id)
+    public function buscar(int $tarefa_id = 0): Tarefa // github - versao php8
     {
-        //Busca uma ou todas as tarefas no banco
+        if ($tarefa_id > 0) {
+            return $this->buscar_tarefa($tarefa_id);
+        } else {
+            return $this->buscar_tarefas();
+        }
+    }
+
+    private function buscar_tarefas(): array
+    {
+        $sqlBusca = 'SELECT * FROM tarefas';
+        $resultado = $this->conexao->query($sqlBusca);
+
+        $tarefas = [];
+
+        while ($tarefa = $resultado->fetch_object('Tarefa')) {
+            $tarefas->setAnexos($this->buscar_anexos($tarefa->getId()) );
+            $tarefas[] = $tarefa;
+        }
+
+        return $tarefas;
+    }
+
+    private function buscar_tarefa(int $tarefa_id): Tarefa
+    {
+        $sqlBusca = "SELECT * FROM tarefas WHERE id = {$tarefa_id}";
+        $resultado = $this->conexao->query($sqlBusca);
+
+        $tarefa = $resultado->fetch_object('Tarefa');
+        $tarefa->setAnexos($this->buscar_anexos($tarefa->getId()) );
+
+        return $tarefa;
+    }
+
+    public function salvar_anexo(Anexo $anexo)
+    {
+        $sqlGravar = "INSERT INTO anexos
+            (tarefa_id, nome, arquivo)
+            VALUES
+            (
+                {$anexo->getTarefaId()},
+                '{$anexo->getNome()}',
+                '{$anexo->getArquivo()}'
+            )
+            ";
+
+        $this->bd->query($sqlGravar);
+    }
+
+    public function buscar_anexos($tarefa_id): array
+    {
+        $sqlBusca = "SELECT * FROM anexos WHERE tarefa_id = {$tarefa_id}";
+        $resultado = $this->bd->query($sqlBusca);
+
+        $anexos = [];
+
+        while ($anexo = $resultado->fetch_object('Anexo')) {
+            $anexos[] = $anexo;
+        }
+
+        return $anexos;
+    }
+
+    public function buscar_anexo(int $anexo_id): Anexo
+    {
+        $sqlBusca = "SELECT * FROM anexos WHERE id = {$anexo_id}";
+        $resultado = $this->bd->query($sqlBusca);
+
+        return $resultado->fetch_object('Anexo');
     }
 
     public function remover(int $tarefa_id)
     {
-        //Remove uma tarefa do banco
+        $sqlRemover = "DELETE FROM tarefas WHERE id = {$tarefa_id}";
+        $this->conexao->query($sqlRemover);
+    }
+
+    public function remover_anexo($id)
+    {
+        $sqlRemover = "DELETE FROM anexos WHERE id = {$id}";
+
+        $this->bd->query($sqlRemover);
     }
 }
