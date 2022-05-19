@@ -1,69 +1,56 @@
-<?php
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Gerenciador de Tarefas</title>
+        <link rel="stylesheet" href="tarefas.css" type="text/css" />
+    </head>
+    <body>
+        <div id="bloco_principal">
+            <h1>Tarefa: <?php echo $tarefa->getNome(); ?></h1>
 
-session_start();
+            <p><a href="tarefas.php">Voltar para a lista de tarefas</a>.</p>
 
-require "config.php";
-require "banco.php";
-require "ajudantes.php";
+            <p><strong>Concluída:</strong> <?php echo traduz_concluida($tarefa->getConcluida()); ?></p>
+            <p><strong>Descrição:</strong> <?php echo nl2br($tarefa->getDescricao()); ?></p>
+            <p><strong>Prazo:</strong> <?php echo traduz_data_para_exibir($tarefa->getPrazo()); ?></p>
+            <p><strong>Prioridade:</strong> <?php echo traduz_prioridade($tarefa->getPrioridade()); ?></p>
 
-$exibir_tabela = false;
-$tem_erros = false;
-$erros_validacao = [];
+            <h2>Anexos</h2>
+            <!-- lista de anexos -->
+            <?php if (count($tarefa->getAnexos()) > 0) : ?>
+                <table>
+                    <tr>
+                        <th>Arquivo</th>
+                        <th>Opções</th>
+                    </tr>
+                    <?php foreach ($tarefa->getAnexos() as $anexo) : ?>
+                        <tr>
+                            <td><?php echo $anexo->getNome(); ?></td>
+                            <td>
+                                <a href="anexos/<?php echo $anexo->getArquivo(); ?>">Download</a>
+                                <a href="remover_anexo.php?id=<?php echo $anexo->getId(); ?>">Remover</a>
+                            </td>   
+                        </tr>
+                    <?php endforeach; ?>
+                </table>
+            <?php else : ?>
+                <p>Não há anexos para esta tarefa.</p>
+            <?php endif; ?>
 
-if (tem_post()) {
-    $tarefa = [
-        'id' => $_POST['id'],
-        'nome' => $_POST['nome'],
-        'descricao' => '',
-        'prazo' => '',
-        'prioridade' => $_POST['prioridade'],
-        'concluida' => 0,
-    ];
-
-    if (strlen($tarefa['nome']) == 0) {
-        $tem_erros = true;
-        $erros_validacao['nome'] = 'O nome da tarefa é obrigatório!';
-    }
-
-    if (array_key_exists('descricao', $_POST)) {
-        $tarefa['descricao'] = $_POST['descricao'];
-    }
-
-    if (array_key_exists('prazo', $_POST) && strlen($_POST['prazo']) > 0) {
-        if (validar_data($_POST['prazo'])) {
-            $tarefa['prazo'] = traduz_data_para_banco($_POST['prazo']);
-        } else {
-            $tem_erros = true;
-            $erros_validacao['prazo'] = 'O prazo não é uma data válida!';
-        } 
-    }
-
-    if (array_key_exists('concluida', $_POST)) {
-        $tarefa['concluida'] = $_POST['concluida'];
-    }
-
-    if (! $tem_erros) {
-        editar_tarefa($conexao, $tarefa);
-        if (array_key_exists('lembrete', $_POST) && $_POST['lembrete'] == '1') {
-            $anexos = buscar_anexos($conexao, $tarefa['id']);
-            enviar_email($tarefa, $anexos);
-        }
-        
-        header('Location: tarefas.php');
-        die();
-    }
-}
-
-$tarefa = buscar_tarefa($conexao, $_GET['id']);
-
-$tarefa['nome'] = (array_key_exists('nome', $_POST)) ? $_POST['nome'] : $tarefa['nome'];
-
-$tarefa['descricao'] = (array_key_exists('descricao', $_POST)) ? $_POST['descricao'] : $tarefa['descricao'];
-
-$tarefa['prazo'] = (array_key_exists('prazo', $_POST)) ? $_POST['prazo'] : $tarefa['prazo'];
-
-$tarefa['prioridade'] = (array_key_exists('prioridade', $_POST)) ? $_POST['prioridade'] : $tarefa['prioridade'];
-
-$tarefa['concluida'] = (array_key_exists('concluida', $_POST)) ? $_POST['concluida'] : $tarefa['concluida'];
-
-require "template.php";
+            <!-- formulário para um novo anexo -->
+            <form action="" method="post" enctype="multipart/form-data">
+                <fieldset>
+                    <legend>Novo anexo</legend>
+                    <input type="hidden" name="tarefa_id" value="<?php echo $tarefa->getId(); ?>" />
+                    <label>
+                        <?php if ($tem_erros && isset($erros_validacao['anexo'])) : ?>
+                            <span class="erro"><?php echo $erros_validacao['anexo']; ?></span>
+                        <?php endif; ?>
+                        <input type="file" name="anexo" />
+                    </label>
+                    <input type="submit" value="Cadastrar" class="botao" />
+                </fieldset>
+            </form>
+        </div>
+    </body>
+</html>
