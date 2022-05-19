@@ -19,6 +19,21 @@ function traduz_data_para_banco($data)
     return $objeto_data->format('Y-m-d');
 }
 
+function traduz_data_br_para_objeto($data)
+{
+    if ($data == "") {
+        return "";
+    }
+
+    $dados = explode("/", $data);
+
+    if (count($dados) != 3) {
+        return $data;
+    }
+
+    return  DateTime::createFromFormat('d/m/Y', $data);
+}
+
 function traduz_data_para_exibir($data)
 {
     if ($data == "" OR $data == "0000-00-00") {
@@ -98,19 +113,16 @@ function tratar_anexo($anexo) {
         return false;
     }
 
-    move_uploaded_file(
-        $anexo['tmp_name'],
-        "anexos/{$anexo['name']}"
-    );
+    move_uploaded_file($anexo['tmp_name'], "anexos/{$anexo['name']}");
 
     return true;
 }
 
-function enviar_email($tarefa, $anexos = [])
+function enviar_email(Tarefa $tarefa)
 {
-    require "bibliotecas/PHPMailer/inc.php";
+    include "bibliotecas/PHPMailer/inc.php";
 
-    $corpo = preparar_corpo_email($tarefa, $anexos);
+    $corpo = preparar_corpo_email($tarefa);
 
     $email = new PHPMailer();
 
@@ -123,11 +135,11 @@ function enviar_email($tarefa, $anexos = [])
     $email->Password = "123Testesdavidphp@";
     $email->setFrom("testesdavidphp@gmail.com", "Avisador de Tarefas");
     $email->addAddress(EMAIL_NOTIFICACAO);
-    $email->Subject = "Aviso de tarefa: {$tarefa['nome']}";
+    $email->Subject = "Aviso de tarefa: {$tarefaa->getNome()}";
     $email->msgHTML($corpo);
 
-    foreach ($anexos as $anexo) {
-        $email->addAttachment("anexos/{$anexo['arquivo']}");
+    foreach ($tafera->getAnexos() as $anexo) {
+        $email->addAttachment("anexos/{$anexo->getArquivo()}");
     }
 
     if (! $email->send()) {
@@ -135,7 +147,7 @@ function enviar_email($tarefa, $anexos = [])
     }
 }
 
-function preparar_corpo_email($tarefa, $anexos)
+function preparar_corpo_email(Tarefa $anexo)
 {
     ob_start();
     include "template_email.php";
