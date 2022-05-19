@@ -1,56 +1,62 @@
-<html>
-    <head>
-        <meta charset="utf-8" />
-        <title>Gerenciador de Tarefas</title>
-        <link rel="stylesheet" href="tarefas.css" type="text/css" />
-    </head>
-    <body>
-        <div id="bloco_principal">
-            <h1>Tarefa: <?php echo $tarefa->getNome(); ?></h1>
+<?php
 
-            <p><a href="tarefas.php">Voltar para a lista de tarefas</a>.</p>
+require "config.php";
+require "banco.php";
+require "ajudantes.php";
+require "classes/Tarefa.php";
+require "classes/Anexo.php";
+require "classes/RepositorioTarefas.php";
 
-            <p><strong>Concluída:</strong> <?php echo traduz_concluida($tarefa->getConcluida()); ?></p>
-            <p><strong>Descrição:</strong> <?php echo nl2br($tarefa->getDescricao()); ?></p>
-            <p><strong>Prazo:</strong> <?php echo traduz_data_para_exibir($tarefa->getPrazo()); ?></p>
-            <p><strong>Prioridade:</strong> <?php echo traduz_prioridade($tarefa->getPrioridade()); ?></p>
+$repositorio_tarefas = new RepositorioTarefas($mysqli);
+$tarefa	= $repositorio_tarefas->buscar($_GET['id']);
 
-            <h2>Anexos</h2>
-            <!-- lista de anexos -->
-            <?php if (count($tarefa->getAnexos()) > 0) : ?>
-                <table>
-                    <tr>
-                        <th>Arquivo</th>
-                        <th>Opções</th>
-                    </tr>
-                    <?php foreach ($tarefa->getAnexos() as $anexo) : ?>
-                        <tr>
-                            <td><?php echo $anexo->getNome(); ?></td>
-                            <td>
-                                <a href="anexos/<?php echo $anexo->getArquivo(); ?>">Download</a>
-                                <a href="remover_anexo.php?id=<?php echo $anexo->getId(); ?>">Remover</a>
-                            </td>   
-                        </tr>
-                    <?php endforeach; ?>
-                </table>
-            <?php else : ?>
-                <p>Não há anexos para esta tarefa.</p>
-            <?php endif; ?>
+$exibir_tabela = false;
+$tem_erros = false;
+$erros_validacao = [];
 
-            <!-- formulário para um novo anexo -->
-            <form action="" method="post" enctype="multipart/form-data">
-                <fieldset>
-                    <legend>Novo anexo</legend>
-                    <input type="hidden" name="tarefa_id" value="<?php echo $tarefa->getId(); ?>" />
-                    <label>
-                        <?php if ($tem_erros && isset($erros_validacao['anexo'])) : ?>
-                            <span class="erro"><?php echo $erros_validacao['anexo']; ?></span>
-                        <?php endif; ?>
-                        <input type="file" name="anexo" />
-                    </label>
-                    <input type="submit" value="Cadastrar" class="botao" />
-                </fieldset>
-            </form>
-        </div>
-    </body>
-</html>
+if (tem_post()) {
+    if (isset($_POST['nome']) && strlen($_POST['nome']) > 0) {
+        $tarefa->setNome($_POST['nome']);
+    } else {
+        $tem_erros = true;
+        $erros_validacao['nome'] = 'O nome da tarefa é obrigatório!';
+    }
+
+    if (isset($_POST['descricao'])) {
+        $tarefa->setDescricao($_POST['descricao']);
+    } else {
+        $tarefa->setDescricao('');
+    }
+
+    if (isset($_POST['prazo']) && strlen($_POST['prazo']) > 0) {
+        if (validar_data($_POST['prazo'])) {
+            $tarefa->setPrazo(traduz_data_br_para_objeto($_POST['prazo']));
+        } else {
+            $tem_erros = true;
+            $erros_validacao['prazo'] = 'O prazo não é uma data válida!';
+        } 
+    } else {
+        $tarefa->setPrazo(null);
+    }
+
+    $tarefa->setPrioridade($_POST['prioridade']);
+
+    if (isset($_POST['concluida'])) {
+        $tarefa->setConcluida(true);
+    } else {
+        $tarefa->setConcluida(false);
+    }
+
+    if (! $tem_erros) {
+        $repositorio_tarefas->atualizar($tarefa);
+
+        if (isset($_POST['lembrete']) && $_POST['lembrete'] == '1') {
+            enviar_email($tarefa);
+        }
+        
+        header('Location: tarefas.php');
+        die();
+    }
+}
+
+require "template.php";
